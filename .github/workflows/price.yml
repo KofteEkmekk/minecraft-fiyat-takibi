@@ -38,5 +38,8 @@ jobs:
         run: |
           git config user.name "duyuru-bot"
           git config user.email "duyuru-bot@users.noreply.github.com"
-          git add price_state.json
-          git diff --staged --quiet || (git commit -m "Fiyat durumu guncellendi" && git pull --rebase -q && git push)
+          if [ -f price_state.json ]; then
+            git add price_state.json
+            git diff --staged --quiet || (git commit -m "Fiyat durumu guncellendi" && git pull --rebase -q && git push)
+          fi
+          
