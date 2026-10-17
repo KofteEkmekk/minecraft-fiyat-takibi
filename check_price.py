@@ -9,7 +9,7 @@ MARKET = "TR"
 LANG = "tr-TR"
 API = (
     "https://displaycatalog.mp.microsoft.com/v7.0/products"
-    f"?bigIds={PRODUCT_ID}&market={MARKET}&languages={LANG}"
+    f"?bigIds={PRODUCT_ID}&market={MARKET}&languages={LANG}&MS-CV=DGU1mcuYo0WMMp+F.1"
 )
 STORE_LINK = f"https://www.microsoft.com/tr-tr/p/minecraft-java-bedrock-edition-for-pc/{PRODUCT_ID.lower()}"
 STATE_FILE = "price_state.json"
@@ -30,6 +30,8 @@ def parse_prices(data):
                 price = (av.get("OrderManagementData") or {}).get("Price") or {}
                 if "Purchase" not in actions or "ListPrice" not in price:
                     continue
+                if float(price["ListPrice"]) <= 0:
+                    continue  # deneme/ucretsiz surumleri atla
                 found.append(
                     {
                         "list": float(price["ListPrice"]),
@@ -42,10 +44,15 @@ def parse_prices(data):
 
 def get_price():
     r = requests.get(API, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
-    r.raise_for_status()
-    prices = parse_prices(r.json())
+    if r.status_code != 200:
+        raise RuntimeError(f"Katalog HTTP {r.status_code}: {r.text[:300]}")
+    data = r.json()
+    prices = parse_prices(data)
     if not prices:
-        raise RuntimeError("Fiyat bulunamadi (yanit yapisi degismis olabilir).")
+        raise RuntimeError(
+            "Fiyat bulunamadi. Yanit baslangici: "
+            + json.dumps(data, ensure_ascii=False)[:800]
+        )
     print("Bulunan fiyatlar:", prices, flush=True)
     # birden fazla secenek varsa en dusuk fiyatliyi al
     return min(prices, key=lambda p: p["list"])
@@ -105,4 +112,4 @@ if __name__ == "__main__":
     except Exception as e:
         print("Hata:", e, file=sys.stderr)
         sys.exit(1)
-
+        
